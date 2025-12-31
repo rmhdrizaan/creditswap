@@ -1,138 +1,103 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ChatProvider } from "./context/ChatContext";
+import ChatSystem from "./components/chat/ChatSystem";
 
-// --- Layout ---
+// Layout
 import Navbar from "./components/layout/Navbar";
+import Footer from "./components/layout/Footer";
 
-// --- Public Pages ---
+// Public Pages
 import Landing from "./pages/Landing";
-import About from "./pages/About";
 import Signup from "./pages/auth/Signup";
 import Login from "./pages/auth/Login";
+import About from "./pages/About";
 
-// --- App Pages ---
+// Protected Pages
+import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import PostJob from "./pages/PostJob";
 import ListingDetail from "./pages/ListingDetail";
 import MyListings from "./pages/MyListings";
 import ManageJob from "./pages/ManageJob";
+import MyWork from "./pages/MyWork";
+import MyBids from "./pages/MyBids";
 import Wallet from "./pages/wallet/Wallet";
 import Profile from "./pages/profile/Profile";
-import MyWork from "./pages/MyWork"; // ✅ NEW
+import Settings from "./pages/profile/Settings";
 
-// --- Route Guard ---
+/* 🔒 Protected Route */
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" replace />;
 };
 
-// --- Layout Wrapper ---
+/* 🌍 Public Route */
+const PublicRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? <Navigate to="/home" replace /> : children;
+};
+
+/* 🧱 Layout */
 const Layout = ({ children }) => (
-  <div className="min-h-screen bg-background text-slateText font-sans selection:bg-primary/20">
+  <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
     <Navbar />
-    {children}
+    <main className="flex-grow">{children}</main>
+    <Footer />
   </div>
 );
+
+/* 💬 Chat Mount Guard */
+const ChatMount = () => {
+  const { user } = useAuth();
+  return user ? <ChatSystem /> : null;
+};
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Layout>
-          <Routes>
-            {/* 🌍 PUBLIC ROUTES */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+        <ChatProvider>
+          <Layout>
+            <Routes>
+              {/* PUBLIC */}
+              <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+              <Route path="/about" element={<About />} />
 
-            {/* 🔐 PROTECTED ROUTES */}
-            <Route
-              path="/marketplace"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* HOME */}
+              <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
 
-            <Route
-              path="/services/:id"
-              element={
-                <ProtectedRoute>
-                  <ListingDetail />
-                </ProtectedRoute>
-              }
-            />
+              {/* CORE */}
+              <Route path="/marketplace" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/services/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
+              <Route path="/post-job" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
 
-            <Route
-              path="/post-job"
-              element={
-                <ProtectedRoute>
-                  <PostJob />
-                </ProtectedRoute>
-              }
-            />
+              {/* WORK */}
+              <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
+              <Route path="/my-listings/:id/manage" element={<ProtectedRoute><ManageJob /></ProtectedRoute>} />
+              <Route path="/my-work" element={<ProtectedRoute><MyWork /></ProtectedRoute>} />
+              <Route path="/my-bids" element={<ProtectedRoute><MyBids /></ProtectedRoute>} />
 
-            <Route
-              path="/my-listings"
-              element={
-                <ProtectedRoute>
-                  <MyListings />
-                </ProtectedRoute>
-              }
-            />
+              {/* SETTINGS */}
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-            <Route
-              path="/my-listings/:id/manage"
-              element={
-                <ProtectedRoute>
-                  <ManageJob />
-                </ProtectedRoute>
-              }
-            />
+              {/* WALLET */}
+              <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
 
-            <Route
-              path="/my-work"
-              element={
-                <ProtectedRoute>
-                  <MyWork />
-                </ProtectedRoute>
-              }
-            />
+              {/* PROFILE */}
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-            <Route
-              path="/wallet"
-              element={
-                <ProtectedRoute>
-                  <Wallet />
-                </ProtectedRoute>
-              }
-            />
+              {/* FALLBACK */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
 
-            {/* 👤 PROFILE ROUTES */}
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/profile/:id"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* ❌ FALLBACK */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
+          {/* 💬 Chat loads ONLY when logged in */}
+          <ChatMount />
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -11,3 +11,9 @@ export const getUserProfile = async (id) => {
   const res = await axios.get(`${API_URL}/${id}`, getConfig());
   return res.data;
 };
+
+// Add this function
+export const updateUserProfile = async (userData) => {
+  const res = await axios.put(`${API_URL}/profile`, userData, getConfig());
+  return res.data;
+};

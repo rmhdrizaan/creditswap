@@ -2,25 +2,10 @@ import mongoose from "mongoose";
 
 const offerSchema = new mongoose.Schema(
   {
-    listing: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Listing",
-      required: true,
-    },
-    worker: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    poster: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    message: {
-      type: String,
-      required: true,
-    },
+    listing: { type: mongoose.Schema.Types.ObjectId, ref: "Listing", required: true },
+    worker: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    poster: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    message: { type: String, required: true },
     status: {
       type: String,
       enum: ["pending", "accepted", "rejected"],

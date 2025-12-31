@@ -4,18 +4,23 @@ const userSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      required: true,
+      required: [true, "Username is required"],
       trim: true,
+      minlength: [3, "Username must be at least 3 characters"],
+      maxlength: [30, "Username cannot exceed 30 characters"],
     },
     email: {
       type: String,
-      required: true,
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"],
     },
     password: {
       type: String,
-      required: true,
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters"],
     },
     role: {
       type: String,
@@ -24,14 +29,36 @@ const userSchema = new mongoose.Schema(
     },
     credits: {
       type: Number,
-      default: 50,
+      default: 100,
+      min: [0, "Credits cannot be negative"],
     },
-    // Profile Fields (Phase 1)
-    bio: { type: String, default: "" },
-    skills: [{ type: String }],
-    avatar: { type: String, default: "" }, // URL to image
+    bio: { 
+      type: String, 
+      default: "",
+      maxlength: [500, "Bio cannot exceed 500 characters"]
+    },
+    skills: [{ 
+      type: String,
+      trim: true 
+    }],
+    avatar: { 
+      type: String, 
+      default: "" 
+    },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: {
+      transform: function(doc, ret) {
+        delete ret.password;
+        return ret;
+      }
+    }
+  }
 );
+
+// Create indexes
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ username: 1 });
 
 export default mongoose.model("User", userSchema);

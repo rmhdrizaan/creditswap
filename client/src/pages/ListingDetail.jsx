@@ -1,97 +1,102 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getListing } from "../services/listingService";
-import { motion } from "framer-motion";
-import { ArrowLeft, Zap, Clock, ShieldCheck, MessageCircle } from "lucide-react";
+import { createOffer, getMyOffers, updateOffer } from "../services/offerService";
+import { ArrowLeft, Zap, Shield, Send, Edit2 } from "lucide-react";
 
 export default function ListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [listing, setListing] = useState(null);
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Track existing bid state
+  const [existingBid, setExistingBid] = useState(null);
 
   useEffect(() => {
-    const fetchListing = async () => {
+    const loadData = async () => {
       try {
-        const data = await getListing(id);
-        setListing(data);
+        const listData = await getListing(id);
+        setListing(listData);
+        
+        // Check if I already bid
+        const myOffers = await getMyOffers();
+        const bid = myOffers.find(o => o.listing._id === id);
+        if(bid) {
+          setExistingBid(bid);
+          setMessage(bid.message);
+        }
       } catch (error) {
-        console.error("Error:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
-    fetchListing();
+    loadData();
   }, [id]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-primary font-bold">Loading...</div>;
-  if (!listing) return <div className="pt-32 text-center">Listing not found</div>;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if(existingBid) {
+        await updateOffer(id, message);
+        alert("Bid updated!");
+      } else {
+        await createOffer(id, message);
+        alert("Application sent!");
+      }
+      navigate("/my-bids");
+    } catch (error) {
+      alert(error.response?.data?.message || "Action failed");
+    }
+  };
+
+  if (loading) return <div className="pt-32 text-center">Loading...</div>;
 
   return (
-    <div className="pt-28 pb-20 px-6 min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-        {/* Left: Main Content */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="md:col-span-2 space-y-6"
-        >
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-mutedText hover:text-slateText transition-colors mb-4">
-            <ArrowLeft size={18} /> Back to Feed
-          </button>
+    <div className="pt-28 pb-20 px-6 min-h-screen bg-slate-50 flex justify-center">
+       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+             <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-6 font-medium"><ArrowLeft size={18}/> Back</button>
+             
+             <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm mb-6">
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wide mb-4 inline-block">{listing.category}</span>
+                <h1 className="text-3xl font-heading font-bold text-slate-900 mb-6">{listing.title}</h1>
+                <p className="whitespace-pre-line text-slate-600">{listing.description}</p>
+             </div>
 
-          <div className="bg-white p-8 rounded-3xl border border-border shadow-soft">
-            <div className="flex justify-between items-start mb-6">
-              <span className="px-3 py-1 bg-indigo-50 text-primary text-xs font-bold uppercase tracking-wider rounded-lg">
-                {listing.category}
-              </span>
-              <span className="text-sm text-mutedText flex items-center gap-1">
-                <Clock size={14} /> Posted {new Date(listing.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-
-            <h1 className="text-3xl font-heading font-bold text-slateText mb-6">{listing.title}</h1>
-            
-            <div className="prose prose-slate max-w-none text-mutedText">
-              <p className="whitespace-pre-line leading-relaxed">{listing.description}</p>
-            </div>
+             {/* Dynamic Form Area */}
+             {listing.status === 'open' && (
+                <div className={`p-8 rounded-3xl border shadow-sm ${existingBid ? "bg-indigo-50 border-indigo-100" : "bg-white border-slate-100"}`}>
+                   <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                     {existingBid ? <><Edit2 size={18}/> Edit your application</> : "Apply for this job"}
+                   </h3>
+                   <textarea 
+                     className="w-full p-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none mb-4 bg-white"
+                     rows="4"
+                     placeholder="Why are you a good fit?"
+                     value={message}
+                     onChange={e => setMessage(e.target.value)}
+                   />
+                   <button onClick={handleSubmit} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-all">
+                      {existingBid ? "Update Application" : "Send Application"} <Send size={16}/>
+                   </button>
+                </div>
+             )}
           </div>
-        </motion.div>
-
-        {/* Right: Action Sidebar */}
-        <motion.div 
-           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-           className="md:col-span-1 space-y-6"
-        >
-          {/* Price Card */}
-          <div className="bg-white p-6 rounded-3xl border border-border shadow-soft text-center">
-            <p className="text-sm text-mutedText mb-2">Budget for this Request</p>
-            <div className="flex items-center justify-center gap-2 text-4xl font-bold text-slateText mb-6">
-              <Zap size={28} className="text-secondary fill-secondary" /> {listing.credits}
-            </div>
-            
-            <button className="w-full py-4 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-0.5 mb-3">
-              Apply for Job
-            </button>
-            <button className="w-full py-4 bg-white border border-border text-slateText font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
-              <MessageCircle size={18} /> Message User
-            </button>
+          
+          {/* Sidebar */}
+          <div>
+             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-center">
+                <p className="text-slate-500 text-sm font-medium mb-2">Budget</p>
+                <div className="text-4xl font-bold text-slate-900 flex items-center justify-center gap-2 mb-4"><Zap size={32} className="text-indigo-500 fill-indigo-500"/> {listing.credits}</div>
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+                   <Shield size={16} className="text-green-500"/> Verified Client
+                </div>
+             </div>
           </div>
-
-          {/* User Card */}
-          <div className="bg-white p-6 rounded-3xl border border-border shadow-soft flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-500">
-              {listing.user.username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-xs text-mutedText">Posted by</p>
-              <p className="font-bold text-slateText">@{listing.user.username}</p>
-            </div>
-            <ShieldCheck size={20} className="ml-auto text-secondary" />
-          </div>
-        </motion.div>
-
-      </div>
+       </div>
     </div>
   );
 }

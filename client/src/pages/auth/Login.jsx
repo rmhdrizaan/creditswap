@@ -1,65 +1,155 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
-import { motion } from "framer-motion";
-import { Mail, Lock, Loader } from "lucide-react";
+import { loginUser } from "../../services/authService";
+import { Zap, LogIn, AlertCircle } from "lucide-react";
 
 export default function Login() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    setLoading(true);
+
+    // Basic validation
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const data = await loginUser(form);
-      login(data);
-      navigate("/");
+      const result = await loginUser(email, password);
+      
+      if (result?.user) {
+        login(result.user);
+        navigate("/home");
+      } else {
+        setError("Login failed - no user data received");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid credentials");
+      console.error("Login error:", err);
+      setError(err.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Abstract Shapes */}
-      <div className="absolute top-[-100px] left-[-100px] w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-96 h-96 bg-secondary/5 rounded-full blur-3xl"></div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-white">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
         <div className="text-center mb-8">
-           <h1 className="text-2xl font-bold font-heading text-slateText">Welcome Back</h1>
-           <p className="text-mutedText">Continue your trading journey</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg mb-4">
+            <Zap size={32} className="text-white" fill="white" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900">CreditSwap</h1>
+          <p className="text-slate-500 mt-2">Trade skills, earn credits</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-           <div className="relative">
-              <Mail className="absolute left-4 top-3.5 text-slate-400" size={20}/>
-              <input name="email" placeholder="Email" onChange={(e) => setForm({...form, email: e.target.value})} className="w-full pl-12 pr-4 py-3 rounded-xl border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" required/>
-           </div>
-           <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-slate-400" size={20}/>
-              <input name="password" type="password" placeholder="Password" onChange={(e) => setForm({...form, password: e.target.value})} className="w-full pl-12 pr-4 py-3 rounded-xl border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" required/>
-           </div>
+        {/* Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <LogIn size={24} /> Welcome Back
+          </h2>
 
-           {error && <div className="p-3 bg-red-50 text-danger text-sm rounded-lg text-center">{error}</div>}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-700">
+              <AlertCircle size={18} />
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
 
-           <button disabled={loading} className="w-full py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/25 flex justify-center items-center gap-2">
-              {loading ? <Loader className="animate-spin" /> : "Log In"}
-           </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                placeholder="you@example.com"
+                required
+                disabled={loading}
+              />
+            </div>
 
-        <div className="mt-6 text-center text-sm text-mutedText">
-           New here? <Link to="/signup" className="text-primary font-bold hover:underline">Create Account</Link>
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                placeholder="••••••••"
+                required
+                disabled={loading}
+                minLength="6"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn size={20} />
+                  Sign In
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="my-6 flex items-center">
+            <div className="flex-1 border-t border-slate-200"></div>
+            <span className="px-4 text-sm text-slate-400">or</span>
+            <div className="flex-1 border-t border-slate-200"></div>
+          </div>
+
+          {/* Signup Link */}
+          <div className="text-center">
+            <p className="text-slate-600">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+              >
+                Sign up now
+              </Link>
+            </p>
+          </div>
         </div>
-      </motion.div>
+
+        {/* Demo Credentials */}
+        <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <p className="text-sm text-slate-600 text-center">
+            <span className="font-medium">Demo:</span> Try with test@test.com / 123456
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
