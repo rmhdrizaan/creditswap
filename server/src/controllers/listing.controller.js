@@ -2,8 +2,7 @@ import Listing from "../models/Listing.js";
 import Offer from "../models/Offer.js";
 import User from "../models/User.js";
 import Transaction from "../models/Transaction.js";
-import Conversation from "../models/Conversation.js";
-import Message from "../models/Message.js";
+
 
 /* ======================================================
    GET MARKET FEED (Exclude my own jobs)
@@ -191,26 +190,7 @@ export const completeListing = async (req, res) => {
     await worker.save();
     await listing.save();
 
-    /* =========================
-       💬 CHAT → COMPLETED
-    ========================== */
-    const convo = await Conversation.findOne({
-      listing: listing._id,
-      participants: { $all: [poster._id, worker._id] },
-    });
-
-    if (convo) {
-      convo.status = "completed";
-      await convo.save();
-
-      await Message.create({
-        conversationId: convo._id,
-        sender: null, // system message
-        content:
-          "✅ JOB COMPLETED. Credits released to worker. Chat will archive in 7 days.",
-        type: "system",
-      });
-    }
+    
 
     res.json({
       message: "Job completed successfully",

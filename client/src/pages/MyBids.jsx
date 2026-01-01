@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getMyOffers } from "../services/offerService";
-import { useChat } from "../context/ChatContext";
+
 import {
   FileText,
   Clock,
   Zap,
   CheckCircle,
-  MessageCircle,
+  
   XCircle,
   AlertCircle
 } from "lucide-react";
@@ -15,29 +15,12 @@ import {
 export default function MyBids() {
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { startConversation } = useChat();
+  
 
   useEffect(() => {
     getMyOffers().then(setBids).finally(() => setLoading(false));
   }, []);
 
-  /* 💬 OPEN CHAT WITH CLIENT */
-  const handleMessageClient = async (bid) => {
-    if (!bid?.listing?._id || !bid?.listing?.user?._id) {
-      alert("Unable to open chat");
-      return;
-    }
-
-    try {
-      await startConversation(
-        bid.listing._id,
-        bid.listing.user._id
-      );
-    } catch (e) {
-      console.error(e);
-      alert(e.message || "Error opening chat");
-    }
-  };
 
   // Group bids by status
   const activeBids = bids.filter(b => b.status === "pending" || b.status === "accepted");
@@ -99,10 +82,7 @@ export default function MyBids() {
                         </div>
                       </div>
 
-                      {/* Message */}
-                      <div className="p-3 bg-slate-50 rounded-xl text-sm text-slate-600 italic border border-slate-100 mb-4">
-                        "{bid.message}"
-                      </div>
+                      
 
                       {/* Footer Actions */}
                       <div className="flex justify-between items-center">
@@ -112,13 +92,8 @@ export default function MyBids() {
                         </span>
 
                         <div className="flex items-center gap-4">
-                          {/* 💬 MESSAGE CLIENT */}
-                          <button
-                            onClick={() => handleMessageClient(bid)}
-                            className="text-sm font-bold text-indigo-600 hover:underline flex items-center gap-1"
-                          >
-                            <MessageCircle size={14} /> Message Client
-                          </button>
+                          
+                          
 
                           {/* STATUS ACTIONS */}
                           {bid.status === "pending" && (

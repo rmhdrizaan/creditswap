@@ -1,7 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ChatProvider } from "./context/ChatContext";
-import ChatSystem from "./components/chat/ChatSystem";
 
 // Layout
 import Navbar from "./components/layout/Navbar";
@@ -23,6 +21,7 @@ import ManageJob from "./pages/ManageJob";
 import MyWork from "./pages/MyWork";
 import MyBids from "./pages/MyBids";
 import Wallet from "./pages/wallet/Wallet";
+import CreditPurchase from "./pages/CreditPurchase";
 import Profile from "./pages/profile/Profile";
 import Settings from "./pages/profile/Settings";
 
@@ -47,58 +46,43 @@ const Layout = ({ children }) => (
   </div>
 );
 
-/* 💬 Chat Mount Guard */
-const ChatMount = () => {
-  const { user } = useAuth();
-  return user ? <ChatSystem /> : null;
-};
-
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ChatProvider>
-          <Layout>
-            <Routes>
-              {/* PUBLIC */}
-              <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
-              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-              <Route path="/about" element={<About />} />
+      <Layout>
+        <Routes>
+          {/* PUBLIC */}
+          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+          <Route path="/about" element={<About />} />
 
-              {/* HOME */}
-              <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          {/* HOME */}
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
 
-              {/* CORE */}
-              <Route path="/marketplace" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/services/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
-              <Route path="/post-job" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
+          {/* CORE */}
+          <Route path="/marketplace" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/services/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
+          <Route path="/post-job" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
 
-              {/* WORK */}
-              <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
-              <Route path="/my-listings/:id/manage" element={<ProtectedRoute><ManageJob /></ProtectedRoute>} />
-              <Route path="/my-work" element={<ProtectedRoute><MyWork /></ProtectedRoute>} />
-              <Route path="/my-bids" element={<ProtectedRoute><MyBids /></ProtectedRoute>} />
+          {/* WORK */}
+          <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
+          <Route path="/my-listings/:id/manage" element={<ProtectedRoute><ManageJob /></ProtectedRoute>} />
+          <Route path="/my-work" element={<ProtectedRoute><MyWork /></ProtectedRoute>} />
+          <Route path="/my-bids" element={<ProtectedRoute><MyBids /></ProtectedRoute>} />
 
-              {/* SETTINGS */}
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          {/* WALLET */}
+          <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+          <Route path="/buy-credits" element={<ProtectedRoute><CreditPurchase /></ProtectedRoute>} />
 
-              {/* WALLET */}
-              <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+          {/* PROFILE */}
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-              {/* PROFILE */}
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-
-              {/* FALLBACK */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
-
-          {/* 💬 Chat loads ONLY when logged in */}
-          <ChatMount />
-        </ChatProvider>
-      </AuthProvider>
+          {/* FALLBACK */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
     </BrowserRouter>
   );
 }

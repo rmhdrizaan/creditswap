@@ -2,16 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getListing, completeListing } from "../services/listingService";
 import { getListingOffers, acceptOffer } from "../services/offerService";
-import { useChat } from "../context/ChatContext";
+
 import {
   ArrowLeft,
   CheckCircle,
   Zap,
-  MessageCircle,
   User,
   Clock,
   Briefcase,
-  Check,
   X
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -19,7 +17,7 @@ import { motion } from "framer-motion";
 export default function ManageJob() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startConversation, hireWorker, completeJob } = useChat();
+  
 
   const [listing, setListing] = useState(null);
   const [offers, setOffers] = useState([]);
@@ -46,67 +44,51 @@ export default function ManageJob() {
     fetchData();
   }, [id]);
 
-  // Handle messaging
-  const handleMessage = async (workerId) => {
-    if (!listing?._id || !workerId) {
-      alert("Cannot open chat");
-      return;
-    }
-
-    try {
-      await startConversation(listing._id, workerId);
-    } catch (err) {
-      console.error("Chat error:", err);
-      alert(err.message || "Could not open chat");
-    }
-  };
-
-  // Handle hiring with chat integration
+  // Handle hiring a worker
   const handleHire = async (offer, workerId) => {
-    if (!confirm(`Hire @${offer.worker?.username} for ${listing.credits} credits? This will unlock full chat and notify other applicants.`)) {
-      return;
-    }
-
+    if (!offer?._id || !workerId) return;
+    
     setHiring(offer._id);
-
     try {
-      // 1. Accept the offer
       await acceptOffer(offer._id);
       
-      // 2. Start conversation if not already started
-      await handleMessage(workerId);
+      // Update local state to reflect the change
+      setOffers(prevOffers => 
+        prevOffers.map(o => {
+          if (o._id === offer._id) {
+            return { ...o, status: "accepted" };
+          }
+          // Reject other pending offers when one is accepted
+          if (o.status === "pending" && o._id !== offer._id) {
+            return { ...o, status: "rejected" };
+          }
+          return o;
+        })
+      );
       
-      // 3. Update conversation status to "active" (hired)
-      await hireWorker(workerId, offer._id);
+      // Update listing status to in-progress
+      setListing(prev => prev ? { ...prev, status: "in-progress" } : null);
       
-      // 4. Refresh data
-      await fetchData();
-      
-      alert(`Successfully hired @${offer.worker?.username}! Full chat unlocked.`);
     } catch (error) {
-      alert(error.message || "Failed to hire worker.");
+      console.error("Error accepting offer:", error);
+      alert("Failed to hire worker. Please try again.");
     } finally {
       setHiring(null);
     }
   };
 
-  // Handle completion with chat integration
+  // Handle completing the job
   const handleComplete = async () => {
-    if (!confirm(`Complete job and transfer ${listing.credits} credits? Chat will be archived.`)) {
-      return;
-    }
-
+    if (!listing || !window.confirm("Are you sure you want to complete this job and release payment?")) return;
+    
     try {
-      // 1. Complete listing
       await completeListing(id);
-      
-      // 2. Update chat status to "completed"
-      await completeJob();
-      
-      alert("Job completed and payment successful!");
-      navigate("/my-listings");
+      // Update listing status
+      setListing(prev => prev ? { ...prev, status: "completed" } : null);
+      alert("Job completed successfully!");
     } catch (error) {
-      alert(error.message || "Payment failed");
+      console.error("Error completing job:", error);
+      alert("Failed to complete job. Please try again.");
     }
   };
 
@@ -238,35 +220,22 @@ export default function ManageJob() {
                       animate={{ opacity: 1, y: 0 }}
                       className="p-6 rounded-xl border-2 border-green-200 bg-green-50"
                     >
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center font-bold text-green-600 text-xl border-2 border-white">
-                            {offer.worker?.username?.[0]?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-slate-900 text-lg">
-                                @{offer.worker?.username}
-                              </h3>
-                              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded">
-                                ✓ HIRED
-                              </span>
-                            </div>
-                            <p className="text-slate-600 italic">
-                              "{offer.message}"
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center font-bold text-green-600 text-xl border-2 border-white">
+                          {offer.worker?.username?.[0]?.toUpperCase() || "?"}
                         </div>
-
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleMessage(offer.worker?._id)}
-                            className="p-3 bg-white text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors flex items-center gap-2 border border-indigo-200"
-                            title="Message Hired Worker"
-                          >
-                            <MessageCircle size={20} />
-                            <span className="hidden md:inline text-sm font-medium">Chat</span>
-                          </button>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-slate-900 text-lg">
+                              @{offer.worker?.username}
+                            </h3>
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded">
+                              ✓ HIRED
+                            </span>
+                          </div>
+                          <p className="text-slate-600 italic">
+                            "{offer.message}"
+                          </p>
                         </div>
                       </div>
                     </motion.div>
@@ -314,16 +283,6 @@ export default function ManageJob() {
                           </div>
 
                           <div className="flex items-center gap-3">
-                            {/* Message button */}
-                            <button
-                              onClick={() => handleMessage(offer.worker?._id)}
-                              className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors flex items-center gap-2"
-                              title="Message Applicant"
-                            >
-                              <MessageCircle size={20} />
-                              <span className="hidden md:inline text-sm font-medium">Message</span>
-                            </button>
-
                             {/* Hire button */}
                             <button
                               onClick={() => handleHire(offer, offer.worker?._id)}

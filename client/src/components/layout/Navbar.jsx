@@ -39,7 +39,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  /* Close menus on route change */
+  /* Close mobile menu on route change */
   useEffect(() => setMobileOpen(false), [location]);
 
   /* Poll notifications + credits */
@@ -52,10 +52,12 @@ export default function Navbar() {
           getMyNotifications(),
           getUserProfile(user._id),
         ]);
-        setNotifications(notifs);
-        setCurrentCredits(profile.credits);
+
+        setNotifications(Array.isArray(notifs) ? notifs : []);
+        setCurrentCredits(profile?.credits ?? 0);
       } catch (err) {
-        console.error(err);
+        console.error("Navbar fetch error:", err);
+        setNotifications([]);
       }
     };
 
@@ -64,11 +66,19 @@ export default function Navbar() {
     return () => clearInterval(interval);
   }, [user]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  /* ✅ SAFE unread count (never crashes) */
+  const unreadCount = Array.isArray(notifications)
+    ? notifications.filter((n) => !n.read).length
+    : 0;
 
   const handleNotifClick = async (n) => {
-    if (!n.read) await markNotificationRead(n._id);
+    try {
+      if (!n.read) await markNotificationRead(n._id);
+    } catch (err) {
+      console.error("Mark notification read failed:", err);
+    }
     setNotifOpen(false);
+
     if (n.type === "offer_received") navigate("/my-listings");
     if (n.type === "offer_accepted") navigate("/my-work");
   };
@@ -88,7 +98,7 @@ export default function Navbar() {
             <div className="bg-gradient-to-tr from-indigo-500 to-purple-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-500/30">
               <Zap size={20} fill="currentColor" />
             </div>
-            <span className="text-xl font-bold font-heading text-slate-800">
+            <span className="text-xl font-bold text-slate-800">
               CreditSwap
             </span>
           </Link>
@@ -97,25 +107,13 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* CENTER (Desktop) */}
+        {/* CENTER */}
         {user && (
           <div className="hidden md:flex items-center gap-6">
             <NavLink to="/home" icon={<HomeIcon size={16} />} label="Home" />
-            <NavLink
-              to="/marketplace"
-              icon={<LayoutGrid size={16} />}
-              label="Marketplace"
-            />
-            <NavLink
-              to="/my-work"
-              icon={<Briefcase size={16} />}
-              label="My Work"
-            />
-            <NavLink
-              to="/my-listings"
-              icon={<FileText size={16} />}
-              label="Listings"
-            />
+            <NavLink to="/marketplace" icon={<LayoutGrid size={16} />} label="Marketplace" />
+            <NavLink to="/my-work" icon={<Briefcase size={16} />} label="My Work" />
+            <NavLink to="/my-listings" icon={<FileText size={16} />} label="Listings" />
           </div>
         )}
 
@@ -126,12 +124,12 @@ export default function Navbar() {
               {/* Credits */}
               <Link
                 to="/wallet"
-                className="relative overflow-hidden flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white rounded-full shadow-lg hover:scale-105 transition-transform"
+                className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white rounded-full shadow-lg"
               >
                 <motion.div
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]"
+                  className="w-2 h-2 rounded-full bg-green-400"
                 />
                 <span className="font-bold text-sm">
                   {currentCredits.toFixed(1)} CR
@@ -141,12 +139,12 @@ export default function Navbar() {
               {/* Notifications */}
               <div className="relative">
                 <button
-                  onClick={() => setNotifOpen(!notifOpen)}
+                  onClick={() => setNotifOpen((v) => !v)}
                   className="p-2 text-slate-500 hover:text-indigo-600 relative"
                 >
                   <Bell size={20} />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                    <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full" />
                   )}
                 </button>
 
@@ -156,11 +154,12 @@ export default function Navbar() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden"
+                      className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border overflow-hidden"
                     >
                       <div className="p-3 text-xs font-bold text-slate-500 uppercase bg-slate-50">
                         Updates
                       </div>
+
                       <div className="max-h-64 overflow-y-auto">
                         {notifications.length === 0 ? (
                           <p className="p-4 text-center text-xs text-slate-400">
@@ -190,7 +189,7 @@ export default function Navbar() {
 
               {/* Post */}
               <Link to="/post-job">
-                <button className="w-9 h-9 bg-slate-100 hover:bg-indigo-100 rounded-full flex items-center justify-center">
+                <button className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center">
                   <PlusCircle size={20} />
                 </button>
               </Link>
@@ -200,11 +199,8 @@ export default function Navbar() {
                 <button className="w-9 h-9 rounded-full bg-indigo-100 font-bold text-indigo-700">
                   {user.username[0].toUpperCase()}
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                  <Link
-                    to="/profile"
-                    className="dropdown-item"
-                  >
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                  <Link to="/profile" className="dropdown-item">
                     <User size={16} /> Profile
                   </Link>
                   <button
@@ -221,13 +217,8 @@ export default function Navbar() {
             </>
           ) : (
             <div className="flex gap-4">
-              <Link to="/login" className="font-bold text-slate-600">
-                Log In
-              </Link>
-              <Link
-                to="/signup"
-                className="px-5 py-2 bg-slate-900 text-white font-bold rounded-xl"
-              >
+              <Link to="/login" className="font-bold text-slate-600">Log In</Link>
+              <Link to="/signup" className="px-5 py-2 bg-slate-900 text-white font-bold rounded-xl">
                 Get Started
               </Link>
             </div>
@@ -235,10 +226,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Toggle */}
-        <button
-          className="md:hidden"
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
+        <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X /> : <Menu />}
         </button>
       </div>
@@ -261,3 +249,5 @@ const NavLink = ({ to, icon, label }) => {
     </Link>
   );
 };
+
+

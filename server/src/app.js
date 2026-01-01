@@ -10,7 +10,7 @@ import offerRoutes from "./routes/offer.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import transactionRoutes from "./routes/transaction.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
-import chatRoutes from "./routes/chat.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 dotenv.config();
 
@@ -21,7 +21,13 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'x-request-timestamp' // ✅ ADD THIS
+  ]
+  
 }));
 
 // Handle preflight
@@ -42,7 +48,7 @@ app.use("/api/offers", offerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/notifications", notificationRoutes);
-app.use("/api/chat", chatRoutes);
+app.use("/api/payments", paymentRoutes); 
 
 // Health check
 app.get("/health", (req, res) => {

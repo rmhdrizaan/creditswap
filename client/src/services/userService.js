@@ -1,19 +1,79 @@
-import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/users";
-
-const getConfig = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  return { headers: { Authorization: `Bearer ${user?.token}` } };
-};
+import api from './api';
 
 export const getUserProfile = async (id) => {
-  const res = await axios.get(`${API_URL}/${id}`, getConfig());
-  return res.data;
+  try {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
 };
 
-// Add this function
-export const updateUserProfile = async (userData) => {
-  const res = await axios.put(`${API_URL}/profile`, userData, getConfig());
-  return res.data;
+export const updateUserProfile = async (data) => {
+  try {
+    const response = await api.put('/users/profile', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
+
+export const updateUserCredits = async (userId, credits) => {
+  try {
+    const response = await api.patch(`/users/${userId}/credits`, { credits });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user credits:', error);
+    throw error;
+  }
+};
+
+export const searchUsers = async (query, limit = 10) => {
+  try {
+    const response = await api.get('/users/search', {
+      params: { q: query, limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error searching users:', error);
+    throw error;
+  }
+};
+
+export const getUserStats = async (userId) => {
+  try {
+    const response = await api.get(`/users/${userId}/stats`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    throw error;
+  }
+};
+
+export const uploadAvatar = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const response = await api.post('/users/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    throw error;
+  }
+};
+
+export default {
+  getUserProfile,
+  updateUserProfile,
+  updateUserCredits,
+  searchUsers,
+  getUserStats,
+  uploadAvatar
 };
