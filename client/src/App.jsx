@@ -24,6 +24,7 @@ import Wallet from "./pages/wallet/Wallet";
 import CreditPurchase from "./pages/CreditPurchase";
 import Profile from "./pages/profile/Profile";
 import Settings from "./pages/profile/Settings";
+import Chat from "./pages/chat/Chat";
 
 /* 🔒 Protected Route */
 const ProtectedRoute = ({ children }) => {
@@ -49,40 +50,46 @@ const Layout = ({ children }) => (
 export default function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          {/* PUBLIC */}
-          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-          <Route path="/about" element={<About />} />
+      <AuthProvider>
+        <Layout>
+          <Routes>
+            {/* PUBLIC */}
+            <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+            <Route path="/about" element={<About />} />
 
-          {/* HOME */}
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            {/* HOME */}
+            <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
 
-          {/* CORE */}
-          <Route path="/marketplace" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/services/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
-          <Route path="/post-job" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
+            {/* CORE */}
+            <Route path="/marketplace" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/services/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
+            <Route path="/post-job" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
 
-          {/* WORK */}
-          <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
-          <Route path="/my-listings/:id/manage" element={<ProtectedRoute><ManageJob /></ProtectedRoute>} />
-          <Route path="/my-work" element={<ProtectedRoute><MyWork /></ProtectedRoute>} />
-          <Route path="/my-bids" element={<ProtectedRoute><MyBids /></ProtectedRoute>} />
+            {/* WORK */}
+            <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
+            <Route path="/my-listings/:id/manage" element={<ProtectedRoute><ManageJob /></ProtectedRoute>} />
+            <Route path="/my-work" element={<ProtectedRoute><MyWork /></ProtectedRoute>} />
+            <Route path="/my-bids" element={<ProtectedRoute><MyBids /></ProtectedRoute>} />
 
-          {/* WALLET */}
-          <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-          <Route path="/buy-credits" element={<ProtectedRoute><CreditPurchase /></ProtectedRoute>} />
+            {/* CHAT */}
+            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/chat/:conversationId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
 
-          {/* PROFILE */}
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            {/* WALLET */}
+            <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+            <Route path="/buy-credits" element={<ProtectedRoute><CreditPurchase /></ProtectedRoute>} />
 
-          {/* FALLBACK */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+            {/* PROFILE */}
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+            {/* FALLBACK */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -34,8 +34,7 @@ const paymentSchema = new mongoose.Schema(
       default: "pending"
     },
     metadata: {
-      type: Map,
-      of: String
+      type: Object // Changed from Map/String to Object to support Numbers/IDs
     }
   },
   { timestamps: true }

@@ -11,7 +11,7 @@ import userRoutes from "./routes/user.routes.js";
 import transactionRoutes from "./routes/transaction.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
-
+import chatRoutes from "./routes/chat.routes.js";
 dotenv.config();
 
 const app = express();
@@ -49,7 +49,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes); 
-
+app.use("/api/chat", chatRoutes);
 // Health check
 app.get("/health", (req, res) => {
   res.status(200).json({

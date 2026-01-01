@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema(
       ref: "User"
     },
     type: {
-      type: String,
+       type: String,
       enum: [
         'offer_received',
         'offer_accepted',
@@ -23,7 +23,9 @@ const notificationSchema = new mongoose.Schema(
         'payment_received',
         'system_alert',
         'account_update',
-        'message_received',
+        'message_received',      // ✅ Chat message
+        'chat_created',         // ✅ New conversation
+        'chat_mention',         // ✅ Mention in chat
         'rating_received',
         'job_reminder',
         'promotion'

@@ -13,7 +13,15 @@ export default function ListingDetail() {
   
   // Track existing bid state
   const [existingBid, setExistingBid] = useState(null);
-
+  {user._id !== listing.owner && (
+    <ChatButton
+      userId={listing.owner}
+      listingId={listing._id}
+      title={`Job: ${listing.title}`}
+      variant="default"
+      className="mt-4"
+    />
+  )}
   useEffect(() => {
     const loadData = async () => {
       try {

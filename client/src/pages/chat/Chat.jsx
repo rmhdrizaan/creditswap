@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -6,28 +5,25 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { 
   Send, MoreVertical, Phone, Video, Image, Paperclip, Smile,
-  ChevronLeft, Search, Check, CheckCheck, Clock, Edit, Trash2,
-  Reply, ThumbsUp, X, Pin, Bell, BellOff, UserPlus, Info
+  ChevronLeft, Search, Check, CheckCheck, Edit, Trash2,
+  Reply, ThumbsUp, X, Pin, Bell, BellOff, UserPlus, Info,
+  MessageSquare, Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ENDPOINT = process.env.REACT_APP_API_URL || "http://localhost:5000";
-let socket;
 
-// This line was incorrectly placed outside the component:
-// const [loading, setLoading] = useState(true); 
-  
 const Chat = () => {
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // State: ALL useState and useRef declarations should be inside the component function
+  // State declarations
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(true); // MOVED HERE
+  const [loading, setLoading] = useState(true);
   const [socketConnected, setSocketConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
@@ -40,58 +36,50 @@ const Chat = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+  const socketRef = useRef(null);
 
-  // Now, the conditional rendering can happen safely as 'loading' is defined within the component scope
-  if (loading) {
-    if (!user) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        </div>
-      );
-    }
-  }
-  
   // Initialize Socket
   useEffect(() => {
-    socket = io(ENDPOINT, { // 'socket' is reassigned here
+    if (!user) return;
+
+    const socket = io(ENDPOINT, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000
     });
- 
 
+    socketRef.current = socket;
 
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
     
     socket.on("typing", (data) => {
       if (data.conversationId === selectedConversation?._id) {
-        setTypingUsers(prev => [...prev.filter(u => u !== data.userId), data.userId]);
-        setIsTyping(true);
+        setTypingUsers(prev => {
+          const newUsers = prev.filter(u => u !== data.userId);
+          newUsers.push(data.userId);
+          return newUsers;
+        });
       }
     });
     
     socket.on("stop_typing", (data) => {
       if (data.conversationId === selectedConversation?._id) {
         setTypingUsers(prev => prev.filter(u => u !== data.userId));
-        if (typingUsers.length <= 1) setIsTyping(false);
       }
     });
     
-    socket.on("message_received", (newMessage) => {
-      if (selectedConversation?._id === newMessage.conversation) {
-        setMessages(prev => [...prev, newMessage]);
+    socket.on("message_received", (newMsg) => {
+      if (selectedConversation?._id === newMsg.conversation) {
+        setMessages(prev => [...prev, newMsg]);
         scrollToBottom();
         
-        // Mark as read
-        if (newMessage.sender._id !== user._id) {
-          markMessageAsRead(newMessage._id);
+        if (newMsg.sender._id !== user._id) {
+          markMessageAsRead(newMsg._id);
         }
       }
-      // Update conversation list
-      updateConversationList(newMessage);
+      updateConversationList(newMsg);
     });
     
     socket.on("message_read", ({ messageId, userId }) => {
@@ -103,35 +91,49 @@ const Chat = () => {
     });
     
     socket.on("reaction_added", ({ messageId, reaction }) => {
-      setMessages(prev => prev.map(msg => 
-        msg._id === messageId 
-          ? { 
-              ...msg, 
-              reactions: msg.reactions?.some(r => 
-                r.userId === reaction.userId && r.emoji === reaction.emoji
-              ) 
-                ? msg.reactions.filter(r => 
-                    !(r.userId === reaction.userId && r.emoji === reaction.emoji)
-                  )
-                : [...(msg.reactions || []), reaction]
-            }
-          : msg
-      ));
+      setMessages(prev => prev.map(msg => {
+        if (msg._id !== messageId) return msg;
+        
+        const existingReactionIndex = msg.reactions?.findIndex(r => 
+          r.userId === reaction.userId && r.emoji === reaction.emoji
+        );
+        
+        if (existingReactionIndex >= 0) {
+          const newReactions = [...(msg.reactions || [])];
+          newReactions.splice(existingReactionIndex, 1);
+          return { ...msg, reactions: newReactions };
+        } else {
+          return { 
+            ...msg, 
+            reactions: [...(msg.reactions || []), reaction] 
+          };
+        }
+      }));
     });
 
     return () => {
-      socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [user]);
 
+  // Handle typing indicator
+  useEffect(() => {
+    setIsTyping(typingUsers.length > 0);
+  }, [typingUsers]);
+
   // Fetch conversations
   useEffect(() => {
-    fetchConversations();
-  }, []);
+    if (user) {
+      fetchConversations();
+    }
+  }, [user]);
 
-  // Handle conversation selection from URL or state
+  // Handle conversation selection from URL
   useEffect(() => {
-    if (conversationId) {
+    if (conversationId && conversations.length > 0) {
       const conversation = conversations.find(c => c._id === conversationId);
       if (conversation) {
         setSelectedConversation(conversation);
@@ -142,8 +144,8 @@ const Chat = () => {
 
   // Join conversation room when selected
   useEffect(() => {
-    if (selectedConversation && socketConnected) {
-      socket.emit("join_conversation", selectedConversation._id);
+    if (selectedConversation && socketRef.current && socketConnected) {
+      socketRef.current.emit("join_conversation", selectedConversation._id);
       markConversationAsRead();
     }
   }, [selectedConversation, socketConnected]);
@@ -158,7 +160,6 @@ const Chat = () => {
       const { data } = await api.get("/chat");
       setConversations(data.conversations || []);
       
-      // If URL has conversationId but not in state, fetch it
       if (conversationId && !selectedConversation) {
         const conversation = (data.conversations || []).find(c => c._id === conversationId);
         if (conversation) {
@@ -178,8 +179,9 @@ const Chat = () => {
       const { data } = await api.get(`/chat/${convId}/messages`);
       setMessages(data.messages || []);
       
-      // Join socket room
-      socket.emit("join_conversation", convId);
+      if (socketRef.current) {
+        socketRef.current.emit("join_conversation", convId);
+      }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
     }
@@ -200,7 +202,6 @@ const Chat = () => {
             : (updated[index].unreadCount || 0) + 1
         };
         
-        // Sort by last activity
         updated.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
       }
       
@@ -214,7 +215,6 @@ const Chat = () => {
     try {
       await api.put(`/chat/${selectedConversation._id}/messages`);
       
-      // Update local state
       setConversations(prev => prev.map(conv => 
         conv._id === selectedConversation._id
           ? { ...conv, unreadCount: 0 }
@@ -227,10 +227,12 @@ const Chat = () => {
 
   const markMessageAsRead = async (messageId) => {
     try {
-      socket.emit("message_read", { 
-        messageId, 
-        conversationId: selectedConversation._id 
-      });
+      if (socketRef.current && selectedConversation) {
+        socketRef.current.emit("message_read", { 
+          messageId, 
+          conversationId: selectedConversation._id 
+        });
+      }
     } catch (error) {
       console.error("Failed to mark message as read:", error);
     }
@@ -247,19 +249,20 @@ const Chat = () => {
       replyTo: replyTo?._id
     };
 
-    // Clear typing indicator
-    socket.emit("stop_typing", {
-      conversationId: selectedConversation._id,
-      userId: user._id
-    });
+    if (socketRef.current) {
+      socketRef.current.emit("stop_typing", {
+        conversationId: selectedConversation._id,
+        userId: user._id
+      });
+    }
 
     try {
       const { data } = await api.post("/chat/message", messageToSend);
       
-      // Send via socket
-      socket.emit("send_message", data.message);
+      if (socketRef.current) {
+        socketRef.current.emit("send_message", data.message);
+      }
       
-      // Update local state
       setMessages(prev => [...prev, data.message]);
       setNewMessage("");
       setReplyTo(null);
@@ -271,24 +274,27 @@ const Chat = () => {
 
   const handleTyping = useCallback(
     debounce(() => {
-      if (selectedConversation && socketConnected) {
-        socket.emit("typing", {
+      if (selectedConversation && socketRef.current && socketConnected) {
+        socketRef.current.emit("typing", {
           conversationId: selectedConversation._id,
           userId: user._id
         });
       }
     }, 300),
-    [selectedConversation, socketConnected, user._id]
+    [selectedConversation, socketConnected, user]
   );
 
   const addReaction = async (messageId, emoji) => {
     try {
       await api.post(`/chat/message/${messageId}/reaction`, { emoji });
-      socket.emit("reaction_added", {
-        messageId,
-        conversationId: selectedConversation._id,
-        reaction: { userId: user._id, emoji }
-      });
+      
+      if (socketRef.current && selectedConversation) {
+        socketRef.current.emit("reaction_added", {
+          messageId,
+          conversationId: selectedConversation._id,
+          reaction: { userId: user._id, emoji }
+        });
+      }
     } catch (error) {
       console.error("Failed to add reaction:", error);
     }
@@ -313,10 +319,9 @@ const Chat = () => {
     if (!conversation?.participants || !user?._id) return null;
     return conversation.participants.find(p => p?._id !== user._id) || null;
   };
-  
 
   const getMessageStatus = (message) => {
-    if (message.sender._id !== user._id) return null;
+    if (!message || message.sender._id !== user._id) return null;
     
     if (message.readBy?.length > 1) {
       return <CheckCheck size={12} className="text-blue-500" />;
@@ -336,7 +341,7 @@ const Chat = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-[calc(100vh-64px)]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -530,8 +535,8 @@ const Chat = () => {
                   {messages.map((message, index) => {
                     const isMine = message?.sender?._id === user?._id;
                     const showAvatar = !isMine && (
-                      index === messages[index + 1]?.sender?._id !== message?.sender?._id
-
+                      index === messages.length - 1 || 
+                      messages[index + 1]?.sender?._id !== message?.sender?._id
                     );
                     
                     return (
@@ -629,7 +634,7 @@ const Chat = () => {
                   {isTyping && typingUsers.length > 0 && (
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-xs">👤</span>
+                        <span className="text-xs">💬</span>
                       </div>
                       <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-2">
                         <div className="flex space-x-1">
@@ -669,7 +674,7 @@ const Chat = () => {
             )}
 
             {/* Input Area */}
-            <div className="border-t border-gray-200 bg-white p-4">
+            <div className="border-t border-gray-200 bg-white p-4 relative">
               <form onSubmit={sendMessage} className="flex items-end gap-2">
                 {/* Attachment Buttons */}
                 <div className="flex gap-1">
@@ -711,7 +716,7 @@ const Chat = () => {
                         sendMessage(e);
                       }
                     }}
-                    placeholder="iMessage"
+                    placeholder="Type a message..."
                     className="w-full min-h-[40px] max-h-[120px] px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     rows="1"
                   />
@@ -738,8 +743,8 @@ const Chat = () => {
                   accept="image/*,.pdf,.doc,.docx,.zip"
                   multiple
                   onChange={(e) => {
-                    // Handle file upload
                     console.log("Files selected:", e.target.files);
+                    // Handle file upload here
                   }}
                 />
               </form>
@@ -751,12 +756,13 @@ const Chat = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute bottom-20 left-4 bg-white border border-gray-200 rounded-xl shadow-xl p-3"
+                    className="absolute bottom-20 left-4 bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-50"
                   >
                     <div className="grid grid-cols-8 gap-1">
                       {['👍', '❤️', '😂', '😮', '😢', '😡', '🙏', '👏'].map((emoji) => (
                         <button
                           key={emoji}
+                          type="button"
                           onClick={() => {
                             setNewMessage(prev => prev + emoji);
                             setShowEmojiPicker(false);
@@ -774,7 +780,7 @@ const Chat = () => {
           </>
         ) : (
           /* Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <MessageSquare size={40} className="text-gray-400" />
             </div>
@@ -827,20 +833,11 @@ const Chat = () => {
                 <>
                   <button className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3">
                     <Pin size={16} className="text-gray-600" />
-                    <span>{selectedConversation.isPinned ? 'Unpin' : 'Pin'} Chat</span>
+                    <span>Pin Chat</span>
                   </button>
                   <button className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3">
-                    {selectedConversation.isMuted ? (
-                      <>
-                        <Bell size={16} className="text-gray-600" />
-                        <span>Unmute Notifications</span>
-                      </>
-                    ) : (
-                      <>
-                        <BellOff size={16} className="text-gray-600" />
-                        <span>Mute Notifications</span>
-                      </>
-                    )}
+                    <Bell size={16} className="text-gray-600" />
+                    <span>Mute Notifications</span>
                   </button>
                   <button className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3">
                     <UserPlus size={16} className="text-gray-600" />

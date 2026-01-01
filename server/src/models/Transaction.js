@@ -5,7 +5,7 @@ const transactionSchema = new mongoose.Schema(
     sender: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      // Removed required: true to allow system transactions
     },
     receiver: {
       type: mongoose.Schema.Types.ObjectId,
@@ -15,7 +15,7 @@ const transactionSchema = new mongoose.Schema(
     listing: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Listing",
-      required: true,
+      // Removed required: true to allow credit purchases
     },
     amount: {
       type: Number,
@@ -23,14 +23,19 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["payment", "deposit", "withdrawal"],
+      // Added credit_purchase
+      enum: ["payment", "deposit", "withdrawal", "credit_purchase"],
       default: "payment",
     },
     status: {
       type: String,
-      enum: ["success", "failed"],
+      // Added completed
+      enum: ["success", "failed", "completed"],
       default: "success",
     },
+    metadata: {
+      type: Object // Flexible metadata storage
+    }
   },
   { timestamps: true }
 );
